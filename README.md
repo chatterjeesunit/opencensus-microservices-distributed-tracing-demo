@@ -1,25 +1,22 @@
-# Open Tracing Microservice Demo (with Jaeger or Zipkin)
-A sample microservices application with OpenTracing with Jaeger or Zipkin. To know more read the blog - https://developerpod.com/2020/09/08/microservices-distributed-tracing-with-jaeger/
+# Distributed Tracing in Spring Boot Microservices using OpenCensus Agent(with Jaeger or Zipkin)
 
 ## Demo App Architecture
-![Architecture](/resources/OpenTracingDemoApp.png)
+![Architecture](/resources/OpenCensusSpringBootDemo.png)
 
 
-## Jaeger Setup vs Zipkin Setup
-
-#### To run Jaeger
-Change following configurations in `docker-compose.yml`
-  * Set `OPENTRACING_JAEGER_ENABLED: 'true'`, in environment variables for following services (`config-server`, `customer-service`, `product-service`, `order-service`, `bff-service`)
-  * Set `--tracing.jaeger=true` and `--tracing.zipkin=false` in the `command` for the `load-balancer` service.
-  * Access Jaeger UI on - http://localhost:16686/search
-  <br>
-
-#### To run Zipkin
-Change following configurations in `docker-compose.yml`
-  * Set `OPENTRACING_JAEGER_ENABLED: 'false'`, in environment variables for following services (`config-server`, `customer-service`, `product-service`, `order-service`, `bff-service`)
-  * Set `--tracing.jaeger=false` and `--tracing.zipkin=true` in the `command` for the `load-balancer` service.
-  * Acces Zipkin UI on - http://localhost:9411/zipkin/
+## Jaeger / Zipkin Setup
+ * A `docker-compose.yml` file is provided that will set up the Jaeger and Zipkin.
+ * Both the tools can be run together, and application can send traces to both of them.
+ * Access Jaeger UI on - http://localhost:16686/search
+ * Acces Zipkin UI on - http://localhost:9411/zipkin/
 <br>
+
+## Open Census Agent Setup
+ * The `docker-compose.yml` also contains setup for OpenCensus Agent
+ * The configuration for OpenCensus Agent is located at - `/resources/docker/ocagent-config.yaml`
+ * It is configured to recieve OpenCensus Traces from application, and export traces to Zipkin and Jaeger tools.
+<br>
+
 
 ## Running the application
 
@@ -31,9 +28,9 @@ Change following configurations in `docker-compose.yml`
 ##### First Time Setup
 Do this if you are starting the application for first time
     
-   `rm -rf ~/data/jaeger-pgres-13`
+   `rm -rf ~/data/opencensus-pgres-13`
     
-   `mkdir -p ~/data/jaeger-pgres-13`
+   `mkdir -p ~/data/opencensus-pgres-13`
  
  
    
@@ -48,7 +45,7 @@ Do this if you are starting the application for first time
     `docker-compose up -d --build`
     
    
-## Data Creation
+## Initial Data Creation
 Connect to PostGres (username: `pgadmin`, password: `pgadmin#123`), and run the sql scripts in `resources/dummy-data-scripts` folder to create the dummy data for this application.
 
  * `Customer-DummyData.sql`  - Run on `customerdb`
@@ -74,3 +71,6 @@ Connect to pgAdmin at http://localhost:5000, and login using the admin credentia
  * Get All Orders for a customer 
   ```http://localhost/api/v1/bff/customer/5c0e7fe0-f062-11ea-9298-0242c0a88003/orders```
  
+
+## PENDING WORK
+ * Enable SQL Tracing
