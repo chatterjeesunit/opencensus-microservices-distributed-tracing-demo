@@ -1,0 +1,157 @@
+version: '3.8'
+
+networks:
+  container-nw:
+
+services:
+  database:
+    image: 'postgres:13'
+    environment:
+      POSTGRES_USER: pgadmin
+      POSTGRES_PASSWORD: 'pgadmin#123'
+      POSTGRES_DB: testdb
+    volumes:
+      - '~/data/jaeger-pgres-13:/var/lib/postgresql/data'
+      - './resources/docker/postgres-init.sh:/docker-entrypoint-initdb.d/postgres-init.sh'
+    ports:
+      - 5432:5432
+    networks:
+      - container-nw
+
+  jaeger:
+    image: 'jaegertracing/all-in-one:1.19'
+    networks:
+      - container-nw
+    ports:
+      - 6831:6831/udp
+      - 5778:5778
+      - 16686:16686
+      - 14268:14268
+
+
+  zipkin:
+    image: openzipkin/zipkin
+    networks:
+      - container-nw
+    ports:
+      - 9411:9411
+
+  open-census-agent:
+    image: 'omnition/opencensus-agent:0.1.11'
+    depends_on:
+      - jaeger
+    networks:
+      - container-nw
+    ports:
+      - 55678:55678
+      - 55679:55679
+    command:
+      - '--config=/etc/ocagent-config.yaml'
+    volumes:
+      - './resources/docker/ocagent-config.yaml:/etc/ocagent-config.yaml'
+
+  config-server:
+    build:
+      context: ./config-server
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - 8080
+    networks:
+      - container-nw
+
+  customer-service:
+    build:
+      context: ./customer-service
+      dockerfile: Dockerfile
+    depends_on:
+      - database
+      - config-server
+    command: 'sh -c " dockerize -timeout 300s -wait-retry-interval 15s -wait tcp://database:5432 -wait http://config-server:8080/actuator/health java -jar /app.jar"'
+    restart: unless-stopped
+    ports:
+      - 8080
+    environment:
+      SPRING_CLOUD_CONFIG_URI: 'http://config-server:8080'
+    networks:
+      - container-nw
+
+  product-service:
+    build:
+      context: ./product-service
+      dockerfile: Dockerfile
+    depends_on:
+      - database
+      - config-server
+    command: 'sh -c " dockerize -timeout 300s -wait-retry-interval 15s -wait tcp://database:5432 -wait http://config-server:8080/actuator/health java -jar /app.jar"'
+    restart: unless-stopped
+    ports:
+      - 8080
+    environment:
+      SPRING_CLOUD_CONFIG_URI: 'http://config-server:8080'
+    networks:
+      - container-nw
+
+  order-service:
+    build:
+      context: ./order-service
+      dockerfile: Dockerfile
+    depends_on:
+      - database
+      - config-server
+    command: 'sh -c " dockerize -timeout 300s -wait-retry-interval 15s -wait tcp://database:5432 -wait http://config-server:8080/actuator/health java -jar /app.jar"'
+    restart: unless-stopped
+    ports:
+      - 8080
+    environment:
+      SPRING_CLOUD_CONFIG_URI: 'http://config-server:8080'
+    networks:
+      - container-nw
+
+  bff-service:
+    build:
+      context: ./bff-service
+      dockerfile: Dockerfile
+    depends_on:
+      - config-server
+      - customer-service
+      - product-service
+      - order-service
+    command: >-
+      sh -c " dockerize -timeout 300s -wait-retry-interval 15s -wait http://config-server:8080/actuator/health -wait http://customer-service:8080/actuator/health -wait http://product-service:8080/actuator/health -wait
+      http://order-service:8080/actuator/health java -jar /app.jar"
+    restart: unless-stopped
+    ports:
+      - 8080
+    environment:
+      SPRING_CLOUD_CONFIG_URI: 'http://config-server:8080'
+    networks:
+      - container-nw
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.bff-service.rule=Host(`dev-sandbox`)
+      - traefik.http.routers.bff-service.entrypoints=http
+      - traefik.http.services.bff-service.loadbalancer.server.port=8080
+
+  load-balancer:
+    build:
+      context: ./resources/docker
+      dockerfile: TraefikCustom-Dockerfile
+    command: >-
+      sh -c " dockerize -timeout 300s -wait-retry-interval 15s -wait http://bff-service:8080/actuator/health /entrypoint.sh --providers.docker=true --providers.docker.exposedbydefault=false --entryPoints.http.address=":80" --accesslog
+      --log.level=INFO --api=true --api.insecure=true --api.dashboard=true"
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '8080:8080'
+    volumes:
+      - '/var/run/docker.sock:/var/run/docker.sock:ro'
+    networks:
+      - container-nw
+    depends_on:
+      - bff-service
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.traefik_http.rule=Host(`dev-sandbox`)
+      - traefik.http.routers.traefik_http.service=api@internal
+      - traefik.http.routers.traefik_http.entrypoints=http

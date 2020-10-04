@@ -1,0 +1,9 @@
+receivers:
+  opencensus:
+    address: ":55678"
+
+exporters:
+  jaeger:
+    collector_endpoint: "http://jaeger:14268/api/traces"
+  zipkin:
+    endpoint: "http://zipkin:9411/api/v2/spans"

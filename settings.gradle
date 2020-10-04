@@ -1,0 +1,5 @@
+include 'config-server'
+include 'customer-service'
+include 'product-service'
+include 'order-service'
+include 'bff-service'
