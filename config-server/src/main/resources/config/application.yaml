@@ -13,10 +13,3 @@ spring:
 logging:
   level:
     org.springframework.web.filter.CommonsRequestLoggingFilter: DEBUG
-
-opencensus:
-  spring:
-    enabled: true
-    trace:
-      propagation: TRACE_PROPAGATION_B3
-      publicEndpoint: true
