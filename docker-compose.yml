@@ -4,6 +4,7 @@ networks:
   container-nw:
 
 services:
+
   database:
     image: 'postgres:13'
     environment:
@@ -24,7 +25,6 @@ services:
       - container-nw
     ports:
       - 6831:6831/udp
-      - 5778:5778
       - 16686:16686
       - 14268:14268
 
@@ -67,7 +67,10 @@ services:
     depends_on:
       - database
       - config-server
-    command: 'sh -c " dockerize -timeout 300s -wait-retry-interval 15s -wait tcp://database:5432 -wait http://config-server:8080/actuator/health java -jar /app.jar"'
+    command: sh -c " dockerize -timeout 300s -wait-retry-interval 15s
+        -wait tcp://database:5432
+        -wait http://config-server:8080/actuator/health
+        java -jar /app.jar"
     restart: unless-stopped
     ports:
       - 8080
@@ -83,7 +86,10 @@ services:
     depends_on:
       - database
       - config-server
-    command: 'sh -c " dockerize -timeout 300s -wait-retry-interval 15s -wait tcp://database:5432 -wait http://config-server:8080/actuator/health java -jar /app.jar"'
+    command: sh -c " dockerize -timeout 300s -wait-retry-interval 15s
+      -wait tcp://database:5432
+      -wait http://config-server:8080/actuator/health
+      java -jar /app.jar"
     restart: unless-stopped
     ports:
       - 8080
@@ -99,7 +105,10 @@ services:
     depends_on:
       - database
       - config-server
-    command: 'sh -c " dockerize -timeout 300s -wait-retry-interval 15s -wait tcp://database:5432 -wait http://config-server:8080/actuator/health java -jar /app.jar"'
+    command: sh -c " dockerize -timeout 300s -wait-retry-interval 15s
+      -wait tcp://database:5432
+      -wait http://config-server:8080/actuator/health
+      java -jar /app.jar"
     restart: unless-stopped
     ports:
       - 8080
@@ -117,9 +126,12 @@ services:
       - customer-service
       - product-service
       - order-service
-    command: >-
-      sh -c " dockerize -timeout 300s -wait-retry-interval 15s -wait http://config-server:8080/actuator/health -wait http://customer-service:8080/actuator/health -wait http://product-service:8080/actuator/health -wait
-      http://order-service:8080/actuator/health java -jar /app.jar"
+    command: sh -c " dockerize -timeout 300s -wait-retry-interval 15s
+      -wait http://config-server:8080/actuator/health
+      -wait http://customer-service:8080/actuator/health
+      -wait http://product-service:8080/actuator/health
+      -wait http://order-service:8080/actuator/health
+      java -jar /app.jar"
     restart: unless-stopped
     ports:
       - 8080
@@ -137,9 +149,19 @@ services:
     build:
       context: ./resources/docker
       dockerfile: TraefikCustom-Dockerfile
-    command: >-
-      sh -c " dockerize -timeout 300s -wait-retry-interval 15s -wait http://bff-service:8080/actuator/health /entrypoint.sh --providers.docker=true --providers.docker.exposedbydefault=false --entryPoints.http.address=":80" --accesslog
-      --log.level=INFO --api=true --api.insecure=true --api.dashboard=true"
+#    image: 'traefik:v2.3'
+    command: sh -c "
+      dockerize -timeout 300s -wait-retry-interval 15s
+      -wait http://bff-service:8080/actuator/health
+      /entrypoint.sh
+      --providers.docker=true
+      --providers.docker.exposedbydefault=false
+      --entryPoints.http.address=":80"
+      --accesslog
+      --log.level=INFO
+      --api=true
+      --api.insecure=true
+      --api.dashboard=true"
     restart: unless-stopped
     ports:
       - '80:80'
