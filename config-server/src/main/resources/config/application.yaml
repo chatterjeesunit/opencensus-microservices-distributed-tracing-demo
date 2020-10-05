@@ -13,3 +13,7 @@ spring:
 logging:
   level:
     org.springframework.web.filter.CommonsRequestLoggingFilter: DEBUG
+
+
+opencensus:
+  agent: "localhost:55678"
